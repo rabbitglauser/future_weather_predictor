@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 
-API_KEY = 'ipb_live_qmRqbgoHr0fwBdE7CCRTh16QzVBrd62ZsUw5PDkC'
+API_KEY = '0fc842512fbabfce10fcb31079322c80'
 GEOCODE_URL = 'http://api.openweathermap.org/geo/1.0/direct'
 HISTORICAL_WEATHER_URL = 'http://api.openweathermap.org/data/2.5/onecall/timemachine'
 
