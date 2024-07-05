@@ -2,101 +2,110 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 
-API_KEY = '0fc842512fbabfce10fcb31079322c80'
-GEOCODE_URL = 'http://api.openweathermap.org/geo/1.0/direct'
-HISTORICAL_WEATHER_URL = 'http://api.openweathermap.org/data/2.5/onecall/timemachine'
 
-
-def get_lat_lon(location):
+class WeatherCollector:
     """
-    :param location: The location for which latitude and longitude are needed.
-    :return: A tuple containing the latitude and longitude values of the specified location.
+    This class represents a WeatherCollector that collects historical weather data for a given location within a specified date range.
 
-    This method sends a GET request to a geocoding API to retrieve latitude and longitude coordinates for a given location. The location parameter should be a string representing the name
-    * or address of the desired location.
+    Attributes:
+        API_KEY (str): The API key for OpenWeatherMap.
+        GEOCODE_URL (str): The URL for the Geocoding API of OpenWeatherMap.
+        HISTORICAL_WEATHER_URL (str): The URL for the Historical Weather API of OpenWeatherMap.
+        location (str): The location for which weather data is collected.
+        start_date (datetime.datetime): The start date of the data collection.
+        end_date (datetime.datetime): The end date of the data collection.
 
-    If successful, the method will return a tuple containing the latitude and longitude values as (latitude, longitude). If the request fails or no data is returned from the API, the method
-    * will return a default set of coordinates (0.0, 0.0).
+    Methods:
+        __init__(self, location: str, start_date: datetime.datetime, end_date: datetime.datetime)
+            Initializes a new instance of the WeatherCollector class.
 
-    Example usage:
-        >>> get_lat_lon("New York City")
-        (40.7128, -74.0060)
+        get_lat_lon(self) -> Tuple[float, float]
+            Retrieves the latitude and longitude coordinates for the given location.
+
+        get_weather_data(self, lat: float, lon: float, date: datetime.datetime) -> Optional[Dict]
+            Retrieves the weather data for the specified latitude, longitude, and date.
+
+        collect_weather_data(self) -> List[Dict]
+            Collects weather data for each day within the specified date range.
+
+        parse_weather_data(self, all_data: List[Dict]) -> None
+            Parses the collected weather data and outputs it as a DataFrame.
     """
-    url = f'{GEOCODE_URL}?q={location}&limit=1&appid={API_KEY}'
-    try:
-        response = requests.get(url)
-        data = response.json()
-        print(f"Response: {data}")  # Log the response for debugging purpose
-        if response.status_code == 200 and len(data) > 0:
-            return data[0]['lat'], data[0]['lon']
-    except requests.exceptions.RequestException as err:
-        print("Request error:", err)
-    except Exception as err:
-        print("Unknown error:", err)
+    API_KEY = 'ipb_live_qmRqbgoHr0fwBdE7CCRTh16QzVBrd62ZsUw5PDkC'
+    GEOCODE_URL = 'http://api.openweathermap.org/geo/1.0/direct'
+    HISTORICAL_WEATHER_URL = 'http://api.openweathermap.org/data/2.5/onecall/timemachine'
 
-    # return default coordinates in case of any errors or no data from API
-    return 0.0, 0.0
+    def __init__(self, location, start_date, end_date):
+        self.location = location
+        self.start_date = start_date
+        self.end_date = end_date
+
+    def get_lat_lon(self):
+        url = f'{self.GEOCODE_URL}?q={self.location}&limit=1&appid={self.API_KEY}'
+        try:
+            response = requests.get(url)
+            data = response.json()
+            print(f"Response: {data}")
+            if response.status_code == 200 and len(data) > 0:
+                return data[0]['lat'], data[0]['lon']
+        except requests.exceptions.RequestException as err:
+            print("Request error:", err)
+        except Exception as err:
+            print("Unknown error:", err)
+
+        return 0.0, 0.0
+
+    def get_weather_data(self, lat, lon, date):
+        url = f'{self.HISTORICAL_WEATHER_URL}?lat={lat}&lon={lon}&dt={int(date.timestamp())}&appid={self.API_KEY}'
+        try:
+            response = requests.get(url)
+            data = response.json()
+            if response.status_code == 200:
+                return data
+            else:
+                raise Exception(f"Error getting weather data for date: {date}")
+        except requests.exceptions.RequestException as err:
+            print("Request error:", err)
+        except Exception as err:
+            print("Unknown error:", err)
+
+    def collect_weather_data(self):
+        lat, lon = self.get_lat_lon()
+
+        date = self.start_date
+        all_data = []
+        while date <= self.end_date:
+            try:
+                data = self.get_weather_data(lat, lon, date)
+                if data is not None:
+                    all_data.append(data)
+            except Exception as e:
+                print(e)
+            date += timedelta(days=1)
+
+        return all_data
+
+    def parse_weather_data(self, all_data):
+        weather_data = []
+        for day_data in all_data:
+            if day_data is not None:
+                for hourly_data in day_data['hourly']:
+                    weather_data.append({
+                        'date': datetime.fromtimestamp(hourly_data['dt']),
+                        'temperature': hourly_data['temp'],
+                        'humidity': hourly_data['humidity'],
+                        'pressure': hourly_data['pressure'],
+                        'weather': hourly_data['weather'][0]['description']
+                    })
+
+        df = pd.DataFrame(weather_data)
+        print(df)
 
 
-def get_weather_data(lat, lon, date):
-    """
-    This method retrieves weather data for a given latitude, longitude,
-    and date from a historical weather API.
-
-    :param lat: latitude of the location
-    :param lon: longitude of the location
-    :param date: date for which weather data is required
-    :return: weather data in JSON format
-
-    :raises Exception: if there is an error in retrieving weather data
-    """
-    url = f'{HISTORICAL_WEATHER_URL}?lat={lat}&lon={lon}&dt={int(date.timestamp())}&appid={API_KEY}'
-    try:
-        response = requests.get(url)
-        data = response.json()
-        if response.status_code == 200:
-            return data
-        else:
-            raise Exception(f"Error getting weather data for date: {date}")
-    except requests.exceptions.RequestException as err:
-        print("Request error:", err)
-    except Exception as err:
-        print("Unknown error:", err)
-
-
-# Example usage
+# Usage
 location = 'London'
 start_date = datetime(2023, 6, 1)
 end_date = datetime(2023, 6, 30)
-
-# Get latitude and longitude for the location
-lat, lon = get_lat_lon(location)
-
-# Loop through each date in the range and get the weather data
-date = start_date
-all_data = []
-while date <= end_date:
-    try:
-        data = get_weather_data(lat, lon, date)
-        all_data.append(data)
-    except Exception as e:
-        print(e)
-    date += timedelta(days=1)
-
-# Convert the collected data into a DataFrame
-# Flatten the JSON data and create a pandas DataFrame
-weather_data = []
-for day_data in all_data:
-    # Check if day_data is not None to avoid TypeError
-    if day_data is not None:
-        for hourly_data in day_data['hourly']:
-            weather_data.append({
-                'date': datetime.fromtimestamp(hourly_data['dt']),
-                'temperature': hourly_data['temp'],
-                'humidity': hourly_data['humidity'],
-                'pressure': hourly_data['pressure'],
-                'weather': hourly_data['weather'][0]['description']
-            })
-
-df = pd.DataFrame(weather_data)
-print(df)
+collector = WeatherCollector(location, start_date, end_date)
+all_data = collector.collect_weather_data()
+collector.parse_weather_data(all_data)
