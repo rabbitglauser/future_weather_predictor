@@ -1,7 +1,6 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
-import scipy
 
 
 class WeatherCollector:
@@ -86,7 +85,7 @@ class WeatherCollector:
 
         return all_data
 
-
+    @staticmethod
     def parse_weather_data(self, all_data):
         weather_data = []
         for day_data in all_data:
@@ -111,4 +110,3 @@ if __name__ == "__main__":
     end_date = datetime(2023, 6, 30)
     collector = WeatherCollector(location, start_date, end_date)
     all_data = collector.collect_weather_data()
-    collector.parse_weather_data(all_data)
