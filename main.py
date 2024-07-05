@@ -8,6 +8,20 @@ HISTORICAL_WEATHER_URL = 'http://api.openweathermap.org/data/2.5/onecall/timemac
 
 
 def get_lat_lon(location):
+    """
+    :param location: The location for which latitude and longitude are needed.
+    :return: A tuple containing the latitude and longitude values of the specified location.
+
+    This method sends a GET request to a geocoding API to retrieve latitude and longitude coordinates for a given location. The location parameter should be a string representing the name
+    * or address of the desired location.
+
+    If successful, the method will return a tuple containing the latitude and longitude values as (latitude, longitude). If the request fails or no data is returned from the API, the method
+    * will return a default set of coordinates (0.0, 0.0).
+
+    Example usage:
+        >>> get_lat_lon("New York City")
+        (40.7128, -74.0060)
+    """
     url = f'{GEOCODE_URL}?q={location}&limit=1&appid={API_KEY}'
     try:
         response = requests.get(url)
@@ -25,6 +39,17 @@ def get_lat_lon(location):
 
 
 def get_weather_data(lat, lon, date):
+    """
+    This method retrieves weather data for a given latitude, longitude,
+    and date from a historical weather API.
+
+    :param lat: latitude of the location
+    :param lon: longitude of the location
+    :param date: date for which weather data is required
+    :return: weather data in JSON format
+
+    :raises Exception: if there is an error in retrieving weather data
+    """
     url = f'{HISTORICAL_WEATHER_URL}?lat={lat}&lon={lon}&dt={int(date.timestamp())}&appid={API_KEY}'
     try:
         response = requests.get(url)
